@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
-    Shield, Smartphone, FileText, Lock, CheckCircle,
-    AlertTriangle, ArrowLeft, Share2, Award, UserCheck,
-    Terminal, XCircle, Scan, Eye, EyeOff, Wifi
+    Shield, Smartphone, FileText, CheckCircle,
+    AlertTriangle, ArrowLeft, Share2, Award,
+    XCircle, EyeOff, Wifi
 } from 'lucide-react';
 
 // --- Types & Interfaces ---
@@ -79,7 +79,7 @@ const InfoSecAppPro = () => {
 
     // --- Helper Functions ---
 
-    const playSound = (type: 'success' | 'error' | 'click') => {
+    const playSound = (_type: 'success' | 'error' | 'click') => {
         // In a real app, we would play Audio objects here.
         // Visual feedback is handled via state.
     };
