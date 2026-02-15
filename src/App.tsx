@@ -200,9 +200,55 @@ const SLIDES: SlideData[] = [
     }
 ];
 
+
+// --- Document Content ---
+const DOCUMENTS = [
+    {
+        id: 1,
+        title: 'הצהרת סודיות - חלק א',
+        redHeader: 'עכשיו נחתום על מספר הצהרות, חשוב שתקרא אותם היטב ותבין את משמעות ההצהרה, הצהרות אלו הינם מסמכים משפטיים מחייבים ועלינו לשים דגש על הרשום בהן!',
+        body: [
+            'ידוע לי כי הוצאה של חומר מסווג שלא כנהלי ביטחון מידע הינה פגיעה בביטחון מדינת ישראל ומהווה "ידיעה סודית", כשמשמעותה בסעיף 113 לחוק העונשין תשל"ז – 1977, ומסירתה בדרך כלשהי לגורם בלתי מוסמך תהווה עבירה פלילית לפי סעיף זה.',
+            'בחתימה על מסמך זה אני מצהיר כי כל החומר המסווג, הפיזי והדיגיטלי אשר בידי נשאר בתחומי יחידת 8200 ולא נלקח עמי לאזורים שאינם מסווגים.'
+        ]
+    },
+    {
+        id: 2,
+        title: 'התחייבות לשמירת סודיות',
+        body: [
+            '1. הנני מצהיר בזה כי ידוע לי שחלה עלי חובה לשמור בסוד ולא לגלות לכל אדם ידיעה שהגיעה אלי בתוקף תפקידי...',
+            '2. כמו כן ידוע לי כי חל עלי איסור למסור חומר כלשהו, מסמכים או חפצים... ללא רשות מוסמכת...',
+            '3. ידוע לי כי הפרת התחייבות זו מהווה עבירה על חוקי הביטחון (כולל פגיעה בביטחון המדינה).',
+            '4. תשומת ליבי הופנתה להוראות סעיף 113 לחוק העונשין, תשל"ז – 1977 [לשון החוק לגבי ריגול חמור ומסירת ידיעה סודית].'
+        ]
+    },
+    {
+        id: 3,
+        title: 'ניגוד עניינים',
+        quote: '"ניגוד עניינים הוא מצב שבו אדם ממלא תפקיד, כאשר יש לו אינטרס נוסף, נסתר, אשר עלול להשפיע על החלטותיו ולהוות שיקול זר"',
+        body: [
+            'הובהר לי וידוע לי כי פקודת מטכ"ל 06.103 "מניעת ניגוד עניינים בצה"ל" שעוסקת באיסור על ניגוד עניינים של חיילי ועובדי צה"ל, חלה לא רק במהלך השירות הסדיר אלא גם במהלך חופשת הפרישה וגם בזמן שירות מילואים פעיל.',
+            'הובהר לי וידוע לי כי על פי הפקודה, בכל מקום שבו יתעורר חשש לניגוד עניינים, בתקופות בהן חלה עלי הפקודה כאמור לעיל, עלי החובה לדווח על כך למפקדי. בהתאם יחידתי תידרש לקיים בחינה של ניגוד העניינים לפי התהליך הקבוע בפקודה.',
+            'יובהר כי אין במסמך זה כדי לגרוע מכל חובה אחרת המוטלת על פי דין על החתום מטה, ובכלל זה חוק העונשין, התשל"ז-1977; חוק שירות הציבור (הגבלות לאחר פרישה), תשכ"ט-1969; תקנות שירות המילואים (חובות חיילי המילואים), התשט"ז-1956.',
+            'אני הח"מ, מצהיר כי קראתי והבנתי את כל החובות המוטלות עלי כמפורט מעלה, וידוע לי כי הצהרה זו אינה גורעת מההצהרה לשמירת סודיות שחתמתי עליה במערכת הצ\'ק היחידתית.'
+        ]
+    }
+];
+
 function App() {
     const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
     const [gameAnswers, setGameAnswers] = useState<Record<string, boolean>>({});
+
+    // New State for documents & completion
+    const [isCourseCompleted, setIsCourseCompleted] = useState(() => {
+        return localStorage.getItem('courseCompleted') === 'true';
+    });
+    // Track which documents are checked: { 1: true, 2: false ... }
+    const [checkedDocs, setCheckedDocs] = useState<Record<number, boolean>>({});
+    // Track user signature details
+    const [userName, setUserName] = useState('');
+    const [userId, setUserId] = useState('');
+    const [userDate, setUserDate] = useState('');
 
     const currentSlide = SLIDES[currentSlideIdx];
     const isLastSlide = currentSlideIdx === SLIDES.length - 1;
@@ -222,6 +268,21 @@ function App() {
             ...prev,
             [key]: answer === correctAnswer
         }));
+    };
+
+    const handleDocCheck = (id: number) => {
+        setCheckedDocs(prev => ({
+            ...prev,
+            [id]: !prev[id]
+        }));
+    };
+
+    const handleFinalSubmit = () => {
+        localStorage.setItem('courseCompleted', 'true');
+        // In a real app, we would send userName and userDate to a backend here alongside the completion status.
+        setIsCourseCompleted(true);
+        // Ensure UI updates immediately
+        window.location.reload();
     };
 
     // --- Render Components ---
@@ -294,7 +355,6 @@ function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {currentSlide.questions?.map((q) => {
-                    // Check if answered in persistent state OR currently showing explanation (though persistent covers it)
                     const key = `${currentSlide.id}-${q.id}`;
                     const isAnswered = gameAnswers[key] !== undefined;
                     const isCorrect = gameAnswers[key];
@@ -350,10 +410,153 @@ function App() {
     );
 
     const renderScore = () => {
+        // Check for persistent completion first
+        if (isCourseCompleted) {
+            return (
+                <div className="flex flex-col items-center justify-center text-center space-y-8 animate-fadeIn max-w-2xl mx-auto min-h-[50vh]">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-emerald-500 blur-3xl opacity-20 rounded-full animate-pulse"></div>
+                        <Award size={120} className="text-emerald-400 relative z-10" />
+                    </div>
+                    <h1 className="text-5xl font-black text-white mb-2">כל הכבוד!</h1>
+                    <div className="bg-slate-800/80 p-8 rounded-2xl border border-emerald-500/30 shadow-2xl w-full">
+                        <div className="text-2xl font-bold text-emerald-400 mb-4">הלומדה הושלמה בהצלחה</div>
+                        <p className="text-slate-300">
+                            סיימת את כל המטלות וחתמת על כל ההצהרות הנדרשות.
+                            <br />
+                            האישור נשמר במערכת.
+                        </p>
+                    </div>
+                    <div className="text-sm text-slate-500 italic">ניתן לסגור את החלון כעת.</div>
+                </div>
+            );
+        }
+
         const totalQuestions = SLIDES.reduce((acc, slide) => acc + (slide.questions?.length || 0), 0);
         const correctAnswers = Object.values(gameAnswers).filter(Boolean).length;
         const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
+        // --- NEW FLOW: If Score is 100, show documents ---
+        if (score === 100) {
+            const allChecked = DOCUMENTS.every(doc => checkedDocs[doc.id]);
+            const isSignatureComplete = userName.trim().length > 0 && userId.trim().length > 0 && userDate.trim().length > 0;
+            const canSubmit = allChecked && isSignatureComplete;
+
+            return (
+                <div className="w-full max-w-4xl mx-auto animate-fadeIn pb-12">
+                    <div className="text-center mb-10">
+                        <div className="inline-block p-4 rounded-full bg-emerald-500/10 mb-4 border border-emerald-500/30">
+                            <Award size={64} className="text-emerald-400" />
+                        </div>
+                        <h1 className="text-4xl font-black text-white mb-2">ציון: 100!</h1>
+                        <p className="text-xl text-slate-300">על מנת לסיים, אנא קרא ואשר את ההצהרות הבאות:</p>
+                    </div>
+
+                    <div className="space-y-8">
+                        {DOCUMENTS.map((doc) => (
+                            <div key={doc.id} className="bg-slate-800/90 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
+                                {/* Header */}
+                                <div className="bg-slate-900/50 p-4 border-b border-slate-700">
+                                    <h3 className="text-xl font-bold text-emerald-400">{doc.title}</h3>
+                                </div>
+
+                                {/* Content */}
+                                <div className="p-6 space-y-4 text-slate-200">
+                                    {doc.redHeader && (
+                                        <p className="font-bold text-red-400 text-lg border-b border-red-500/20 pb-2 mb-4">
+                                            {doc.redHeader}
+                                        </p>
+                                    )}
+
+                                    {doc.quote && (
+                                        <blockquote className="border-r-4 border-emerald-500 pr-4 italic text-slate-400 my-4 bg-slate-900/30 p-3 rounded">
+                                            {doc.quote}
+                                        </blockquote>
+                                    )}
+
+                                    {doc.body.map((paragraph, idx) => (
+                                        <p key={idx} className="leading-relaxed text-right">
+                                            {paragraph}
+                                        </p>
+                                    ))}
+                                </div>
+
+                                {/* Action Area */}
+                                <div className="bg-emerald-900/10 p-4 border-t border-slate-700 flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id={`doc-${doc.id}`}
+                                        checked={!!checkedDocs[doc.id]}
+                                        onChange={() => handleDocCheck(doc.id)}
+                                        className="w-6 h-6 rounded border-slate-600 text-emerald-600 focus:ring-emerald-500 bg-slate-700 cursor-pointer"
+                                    />
+                                    <label htmlFor={`doc-${doc.id}`} className="text-lg font-medium cursor-pointer select-none text-emerald-100">
+                                        קראתי, הבנתי ואני מאשר/ת את הנאמר במסמך זה.
+                                    </label>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Signature Section */}
+                    <div className="bg-slate-800/80 p-6 rounded-xl border border-slate-600/50 mt-8 shadow-lg">
+                        <h3 className="text-xl font-bold text-emerald-400 mb-6 flex items-center gap-2">
+                            <CheckCircle size={24} /> ולראיה באתי על החתום
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="md:col-span-2">
+                                <label htmlFor="userId" className="block text-slate-300 mb-2 font-medium">תעודת זהות:</label>
+                                <input
+                                    type="text"
+                                    id="userId"
+                                    value={userId}
+                                    onChange={(e) => setUserId(e.target.value)}
+                                    placeholder="הכנס תעודת זהות"
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="userName" className="block text-slate-300 mb-2 font-medium">שם מלא:</label>
+                                <input
+                                    type="text"
+                                    id="userName"
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
+                                    placeholder="הכנס שם מלא"
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="userDate" className="block text-slate-300 mb-2 font-medium">תאריך:</label>
+                                <input
+                                    type="date"
+                                    id="userDate"
+                                    value={userDate}
+                                    onChange={(e) => setUserDate(e.target.value)}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-10 flex justify-center pb-20">
+                        <button
+                            onClick={handleFinalSubmit}
+                            disabled={!canSubmit}
+                            className={`flex items-center gap-3 px-10 py-4 rounded-xl font-bold text-xl transition-all shadow-2xl ${canSubmit
+                                ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white hover:scale-105 hover:shadow-emerald-500/20'
+                                : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                                }`}
+                        >
+                            <CheckCircle size={28} />
+                            {canSubmit ? 'אישור וסיום לומדה' : 'יש למלא את כל השדות ולאשר את המסמכים'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- OLD FLOW (Score < 100) ---
         let gradeText = "";
         let gradeColor = "";
 
@@ -430,55 +633,58 @@ function App() {
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
             </div>
 
-            {/* Progress Bar */}
-            <div className="relative z-10 w-full max-w-3xl mx-auto mb-8 bg-slate-900/50 h-2 rounded-full overflow-hidden border border-slate-800">
-                <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-500 ease-out"
-                    style={{ width: `${((currentSlideIdx + 1) / SLIDES.length) * 100}%` }}
-                ></div>
-            </div>
+            {/* Progress Bar (Hide if completed) */}
+            {!isCourseCompleted && (
+                <div className="relative z-10 w-full max-w-3xl mx-auto mb-8 bg-slate-900/50 h-2 rounded-full overflow-hidden border border-slate-800">
+                    <div
+                        className="h-full bg-gradient-to-r from-emerald-500 to-cyan-400 transition-all duration-500 ease-out"
+                        style={{ width: `${((currentSlideIdx + 1) / SLIDES.length) * 100}%` }}
+                    ></div>
+                </div>
+            )}
 
             {/* Main Content Area */}
-            <main className="relative z-10 flex-grow flex flex-col justify-center items-center w-full max-w-6xl mx-auto min-h-[60vh]">
+            <main className="relative z-10 flex-grow flex flex-col justify-center items-center w-full max-w-6xl mx-auto min-h-[60vh] pb-20">
 
-                {currentSlide.type === 'intro' && renderIntroOrInfo()}
-                {currentSlide.type === 'info' && renderIntroOrInfo()}
-                {currentSlide.type === 'summary' && renderSummary()}
-                {currentSlide.type === 'game' && renderGame()}
-                {currentSlide.type === 'score' && renderScore()}
+                {!isCourseCompleted && currentSlide.type === 'intro' && renderIntroOrInfo()}
+                {!isCourseCompleted && currentSlide.type === 'info' && renderIntroOrInfo()}
+                {!isCourseCompleted && currentSlide.type === 'summary' && renderSummary()}
+                {!isCourseCompleted && currentSlide.type === 'game' && renderGame()}
+
+                {/* Always render score if it's the score slide OR if course is completed (renderScore handles completion view internally) */}
+                {(currentSlide.type === 'score' || isCourseCompleted) && renderScore()}
 
             </main>
 
             {/* Footer Navigation */}
-            <footer className="relative z-10 mt-8 flex justify-center items-center max-w-4xl mx-auto w-full border-t border-slate-800/50 pt-6">
+            {!isCourseCompleted && currentSlide.type !== 'score' && (
+                <footer className="relative z-10 mt-8 flex justify-center items-center max-w-4xl mx-auto w-full border-t border-slate-800/50 pt-6">
 
-                {/* Hidden/Removed Previous Button */}
-                {/* Placeholders for layout balance if needed, but centering single button is fine too */}
+                    <span className="font-mono text-slate-500 text-sm absolute left-0">
+                        SLIDE {currentSlideIdx + 1} / {SLIDES.length}
+                    </span>
 
-                <span className="font-mono text-slate-500 text-sm absolute left-0">
-                    SLIDE {currentSlideIdx + 1} / {SLIDES.length}
-                </span>
+                    {(() => {
+                        const allQuestionsAnswered = currentSlide.type !== 'game' ||
+                            (currentSlide.questions?.every(q => gameAnswers[`${currentSlide.id}-${q.id}`] !== undefined) ?? true);
 
-                {currentSlide.type !== 'score' && (() => {
-                    const allQuestionsAnswered = currentSlide.type !== 'game' ||
-                        (currentSlide.questions?.every(q => gameAnswers[`${currentSlide.id}-${q.id}`] !== undefined) ?? true);
-
-                    return (
-                        <button
-                            onClick={nextSlide}
-                            disabled={isLastSlide || !allQuestionsAnswered}
-                            className={`flex items-center gap-2 px-8 py-3 rounded-lg font-bold text-lg transition-all ${isLastSlide
-                                ? 'opacity-0 cursor-default'
-                                : !allQuestionsAnswered
-                                    ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400 border border-slate-600'
-                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 active:scale-95'
-                                }`}
-                        >
-                            {allQuestionsAnswered ? 'הבא' : 'השלם את השאלות'} <ChevronLeft size={24} />
-                        </button>
-                    );
-                })()}
-            </footer>
+                        return (
+                            <button
+                                onClick={nextSlide}
+                                disabled={isLastSlide || !allQuestionsAnswered}
+                                className={`flex items-center gap-2 px-8 py-3 rounded-lg font-bold text-lg transition-all ${isLastSlide
+                                    ? 'opacity-0 cursor-default'
+                                    : !allQuestionsAnswered
+                                        ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-400 border border-slate-600'
+                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20 active:scale-95'
+                                    }`}
+                            >
+                                {allQuestionsAnswered ? 'הבא' : 'השלם את השאלות'} <ChevronLeft size={24} />
+                            </button>
+                        );
+                    })()}
+                </footer>
+            )}
 
             {/* Global Styles for Animations */}
             <style>{`
