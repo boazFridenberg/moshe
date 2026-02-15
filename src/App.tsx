@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Shield, CheckCircle, XCircle, AlertTriangle,
-    ChevronLeft, Award, Lock
+    ChevronLeft, Award, Lock, Settings
 } from 'lucide-react';
+import AdminLogin from './AdminLogin';
+import AdminDashboard from './AdminDashboard';
+import Notification, { NotificationType } from './Notification';
 
 // --- Assets Imports ---
 // Note: Using relative paths to 'assest' folder as found in directory listing
@@ -236,19 +239,38 @@ const DOCUMENTS = [
 ];
 
 function App() {
-    const [currentSlideIdx, setCurrentSlideIdx] = useState(0);
-    const [gameAnswers, setGameAnswers] = useState<Record<string, boolean>>({});
+    const [currentSlideIdx, setCurrentSlideIdx] = useState(() => {
+        const saved = sessionStorage.getItem('currentSlideIdx');
+        return saved ? parseInt(saved, 10) : 0;
+    });
+    const [gameAnswers, setGameAnswers] = useState<Record<string, boolean>>(() => {
+        const saved = sessionStorage.getItem('gameAnswers');
+        return saved ? JSON.parse(saved) : {};
+    });
 
     // New State for documents & completion
     const [isCourseCompleted, setIsCourseCompleted] = useState(() => {
-        return localStorage.getItem('courseCompleted') === 'true';
+        return sessionStorage.getItem('courseCompleted') === 'true';
     });
     // Track which documents are checked: { 1: true, 2: false ... }
     const [checkedDocs, setCheckedDocs] = useState<Record<number, boolean>>({});
     // Track user signature details
     const [userName, setUserName] = useState('');
     const [userId, setUserId] = useState('');
-    const [userDate, setUserDate] = useState('');
+
+    // Admin State
+    const [showAdminLogin, setShowAdminLogin] = useState(false);
+    const [adminToken, setAdminToken] = useState<string | null>(null);
+    const [notification, setNotification] = useState<{ show: boolean; type: NotificationType; message: string }>({ show: false, type: 'success', message: '' });
+
+    // Save progress to sessionStorage whenever it changes
+    useEffect(() => {
+        sessionStorage.setItem('currentSlideIdx', currentSlideIdx.toString());
+    }, [currentSlideIdx]);
+
+    useEffect(() => {
+        sessionStorage.setItem('gameAnswers', JSON.stringify(gameAnswers));
+    }, [gameAnswers]);
 
     const currentSlide = SLIDES[currentSlideIdx];
     const isLastSlide = currentSlideIdx === SLIDES.length - 1;
@@ -277,12 +299,39 @@ function App() {
         }));
     };
 
-    const handleFinalSubmit = () => {
-        localStorage.setItem('courseCompleted', 'true');
-        // In a real app, we would send userName and userDate to a backend here alongside the completion status.
+    const handleFinalSubmit = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: userName,
+                    idNumber: userId
+                }),
+            });
+
+            if (response.ok) {
+                console.log('User data saved successfully');
+                setNotification({ show: true, type: 'success', message: 'הפרטים שלך נשמרו בהצלחה!' });
+            } else {
+                console.error('Failed to save user data');
+                setNotification({ show: true, type: 'error', message: 'שגיאה בשמירת הפרטים' });
+                return; // Don't reload on error
+            }
+        } catch (error) {
+            console.error('Error connecting to server:', error);
+            setNotification({ show: true, type: 'error', message: 'שגיאה בהתחברות לשרת' });
+            return; // Don't reload on error
+        }
+
+        sessionStorage.setItem('courseCompleted', 'true');
         setIsCourseCompleted(true);
         // Ensure UI updates immediately
-        window.location.reload();
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
     };
 
     // --- Render Components ---
@@ -439,7 +488,7 @@ function App() {
         // --- NEW FLOW: If Score is 100, show documents ---
         if (score === 100) {
             const allChecked = DOCUMENTS.every(doc => checkedDocs[doc.id]);
-            const isSignatureComplete = userName.trim().length > 0 && userId.trim().length > 0 && userDate.trim().length > 0;
+            const isSignatureComplete = userName.trim().length > 0 && userId.trim().length > 0;
             const canSubmit = allChecked && isSignatureComplete;
 
             return (
@@ -503,8 +552,8 @@ function App() {
                         <h3 className="text-xl font-bold text-emerald-400 mb-6 flex items-center gap-2">
                             <CheckCircle size={24} /> ולראיה באתי על החתום
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="md:col-span-2">
+                        <div className="grid grid-cols-1 gap-6">
+                            <div>
                                 <label htmlFor="userId" className="block text-slate-300 mb-2 font-medium">תעודת זהות:</label>
                                 <input
                                     type="text"
@@ -523,16 +572,6 @@ function App() {
                                     value={userName}
                                     onChange={(e) => setUserName(e.target.value)}
                                     placeholder="הכנס שם מלא"
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label htmlFor="userDate" className="block text-slate-300 mb-2 font-medium">תאריך:</label>
-                                <input
-                                    type="date"
-                                    id="userDate"
-                                    value={userDate}
-                                    onChange={(e) => setUserDate(e.target.value)}
                                     className="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
                                 />
                             </div>
@@ -617,8 +656,37 @@ function App() {
         );
     };
 
+    // If admin is logged in, show dashboard
+    if (adminToken) {
+        return <AdminDashboard token={adminToken} onLogout={() => setAdminToken(null)} />;
+    }
+
     return (
         <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8 flex flex-col overflow-hidden" dir="rtl">
+            {/* Notification */}
+            {notification.show && (
+                <Notification
+                    type={notification.type}
+                    message={notification.message}
+                    onClose={() => setNotification({ ...notification, show: false })}
+                />
+            )}
+            {/* Admin Login Modal */}
+            {showAdminLogin && (
+                <AdminLogin
+                    onClose={() => setShowAdminLogin(false)}
+                    onLoginSuccess={(token) => setAdminToken(token)}
+                />
+            )}
+
+            {/* Admin Button - Fixed Position */}
+            <button
+                onClick={() => setShowAdminLogin(true)}
+                className="fixed top-4 left-4 z-40 bg-slate-800/80 backdrop-blur-sm hover:bg-slate-700 border border-slate-600 p-3 rounded-lg transition-all group shadow-lg"
+                title="כניסת מנהל"
+            >
+                <Settings className="text-slate-400 group-hover:text-emerald-400 transition-colors" size={24} />
+            </button>
 
             {/* Background Decor */}
             <div className="fixed inset-0 pointer-events-none">
